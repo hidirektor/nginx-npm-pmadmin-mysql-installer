@@ -1,0 +1,69 @@
+version: '3'
+
+services:
+  database:
+    image: mysql:latest
+    container_name: mysql
+    restart: always
+    environment:
+      MYSQL_DATABASE: oasdasd
+      MYSQL_USER: asdasd
+      MYSQL_PASSWORD: asdasd
+      MYSQL_ROOT_PASSWORD: asdasd
+    volumes:
+      - '../docker/mysql/data:/var/lib/mysql'
+    networks:
+      - app-network
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin
+    environment:
+      PMA_HOST: mysql
+      UPLOAD_LIMIT: 300M
+      PMA_PORT: 3306
+      PMA_ARBITRARY: 0
+      MYSQL_ROOT_PASSWORD: asdasd
+    depends_on:
+      - database
+    networks:
+      - app-network
+    restart: always
+    ports:
+      - "8183:80"
+
+  app:
+    image: jc21/nginx-proxy-manager:latest
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "81:81" # HTTPs port
+      - "443:443" # HTTPS port
+    environment:
+      DB_MYSQL_HOST: database
+      DB_MYSQL_PORT: 3306
+      DB_MYSQL_USER: npm
+      DB_MYSQL_PASSWORD: npm_password
+      DB_MYSQL_NAME: npm
+    volumes:
+      - ./data:/data
+      - ./letsencrypt:/etc/letsencrypt
+    depends_on:
+      - database
+    networks:
+      - app-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: container_nginx
+    restart: unless-stopped
+    volumes:
+      - ../docker/nginx/conf:/etc/nginx/conf:ro
+    ports:
+      - "8080:80"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
